@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Payment Scam Detector — Slice 1</title>
+</head>
+<body>
+  <h1>Payment Scam Detector — Slice 1</h1>
+
+  <textarea id="message" placeholder="Paste a payment-related message here…"></textarea>
+  <br>
+  <button id="analyzeBtn">Analyze</button>
+
+  <div id="loading" style="display: none;">Analyzing…</div>
+  <div id="result" style="display: none;">
+    <p>Risk Level: <span id="riskLevel"></span></p>
+    <p>Risk Score: <span id="riskScore"></span></p>
+    <p>Signals:</p>
+    <ul id="signals"></ul>
+    <p>Recommended Action: <span id="recommendedAction"></span></p>
+    <p id="summary" style="font-weight: bold;"></p>
+    <ul id="explanation"></ul>
+    <p>Safe actions:</p>
+    <ul id="actions"></ul>
+  </div>
+  <div id="error" style="display: none;"></div>
+
+  <script>
+    const messageEl = document.getElementById("message");
+    const loadingEl = document.getElementById("loading");
+    const resultEl = document.getElementById("result");
+    const errorEl = document.getElementById("error");
+
+    document.getElementById("analyzeBtn").addEventListener("click", async () => {
+      const message = messageEl.value;
+      resultEl.style.display = "none";
+      errorEl.style.display = "none";
+      errorEl.textContent = "";
+
+      if (!message.trim()) {
+        errorEl.textContent = "Please enter a message before submitting.";
+        errorEl.style.display = "block";
+        return;
+      }
+
+      loadingEl.style.display = "block";
+      try {
+        const response = await fetch("http://localhost:8000/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message })
+        });
+        if (!response.ok) {
+          throw new Error(response.status);
+        }
+        const data = await response.json();
+        document.getElementById("riskLevel").textContent = data.risk_level;
+        document.getElementById("riskScore").textContent = data.risk_score;
+        document.getElementById("signals").innerHTML = "";
+        data.signals.forEach((s) => {
+          const li = document.createElement("li");
+          li.textContent = s;
+          document.getElementById("signals").appendChild(li);
+        });
+        document.getElementById("recommendedAction").textContent = data.recommended_action;
+        document.getElementById("summary").textContent = data.summary || "";
+        document.getElementById("explanation").innerHTML = "";
+        (data.explanation || []).forEach((s) => {
+          const li = document.createElement("li");
+          li.textContent = s;
+          document.getElementById("explanation").appendChild(li);
+        });
+        document.getElementById("actions").innerHTML = "";
+        (data.actions || []).forEach((s) => {
+          const li = document.createElement("li");
+          li.textContent = s;
+          document.getElementById("actions").appendChild(li);
+        });
+        resultEl.style.display = "block";
+      } catch (e) {
+        errorEl.textContent = "Error: " + e.message + ". Please try again.";
+        errorEl.style.display = "block";
+      } finally {
+        loadingEl.style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html>
