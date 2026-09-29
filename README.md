@@ -1,140 +1,101 @@
-# Payment Guardian
+# VH-S02 — Slice 4: Intelligence + Hardening + Integration
 
-Detecting digital payment scams before money is sent. Paste a suspicious payment-related message and get a deterministic, explainable risk assessment with safe next steps.
+**Status:** Slice 4. Deterministic pipeline (payment/message/URL/QR) with
+optional, disabled-by-default intelligence: a synthetic-data ML slot
+(`MODEL_BACKEND=none` default) and a redacted advisory-only layer
+(`ADVISORY_ENABLED=false` default) that can never change a verdict.
+Real authentication (opaque bearer sessions, user-scoped data), server-side
+rate limiting, configuration hardening, and a Docker Compose demo stack.
 
-## Overview
+**Honest capability statement:** risk scores come from deterministic rules;
+the ML model (when enabled) approximates those rules on synthetic data and
+adds no independent fraud knowledge (`backend/ml/EVAL.md`); advisory text is
+guidance, never a verdict. No accuracy claims are made anywhere in this repo
+except the synthetic-eval numbers in `EVAL.md`, clearly qualified.
 
-Payment scams usually arrive as ordinary-looking messages: fake refunds, prize claims, KYC threats, OTP requests, QR/link lures. Payment Guardian analyzes the message text through a deterministic pipeline — signal extraction, weighted risk scoring, and evidence-grounded explanation — and returns a risk level, score, and recommended safe actions via a FastAPI backend with a minimal web frontend.
+Behaviour inspired by the SentinelPay reference project (`../sentinelpay-main/`,
+read-only — nothing is copied from it, and it is never a build dependency).
+Credit: SentinelPay by Shaurya Naik and Siddhant Kerkar
+(https://github.com/ShauryaNCode/sentinelpay, unlicensed — clean-room reimplementation).
 
-## Features
+## Run it (clean machine)
 
-- Message analysis via `POST /api/analyze`
-- Deterministic scam-signal extraction (8 signal types: urgency, reward/prize, refund claim, payment request, OTP/PIN request, account/credential request, impersonation, scan-or-click action)
-- Weighted risk scoring (0.00–1.00) with combination bonuses
-- Risk levels: LOW / MEDIUM / HIGH / CRITICAL
-- Explainable scoring (each score contribution cites its matched evidence)
-- Evidence-grounded user explanations (every explanation quotes the matched text)
-- Recommended safe actions per matched signal
-- End-to-end frontend ↔ backend flow
-
-## Architecture
-
-```
-User Message
-    ↓
-Signal Extraction (signal_extractor.py, 8 deterministic matchers)
-    ↓
-Risk Scoring (risk_scorer.py, weights + combination bonuses)
-    ↓
-Explanation / Safe Actions (explainer.py, templates grounded in observed signals)
-    ↓
-API (main.py → mock_analyzer.py coordinator, POST /api/analyze)
-    ↓
-Frontend (frontend/index.html)
-```
-
-`mock_analyzer.analyze()` is the coordinator: extractor → scorer → explainer. Scoring logic lives in `risk_scorer`, wording in `explainer`, never in the coordinator.
-
-## Tech Stack
-
-- Python 3.11+
-- FastAPI, Uvicorn, Pydantic
-- httpx, pytest, pytest-asyncio
-- Plain HTML/JS frontend (no framework)
-
-## Project Structure
-
-```
-payment-guardian/
-├── backend/
-│   ├── main.py             # FastAPI app, /api/analyze, serves frontend
-│   ├── mock_analyzer.py    # Pipeline coordinator (extract → score → explain)
-│   ├── signal_extractor.py # 8 deterministic signal matchers
-│   ├── risk_scorer.py      # Weights, combination bonuses, risk levels
-│   ├── explainer.py        # Evidence-grounded summaries, explanations, actions
-│   └── requirements.txt
-├── frontend/
-│   └── index.html          # Paste-message → result UI
-└── tests/
-    ├── test_analyze_endpoint.py
-    ├── test_signal_extractor.py
-    ├── test_risk_scorer.py
-    └── test_explainer.py
-```
-
-## Getting Started
-
-Prerequisites: Python 3.11+.
-
-```powershell
-pip install -r backend/requirements.txt
-```
-
-Run the backend (serves the API and the frontend):
-
+### Backend
 ```powershell
 cd backend
-uvicorn main:app --reload --port 8000
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+Copy-Item .env.example .env   # edit DATABASE_URL for Postgres, or keep SQLite
+alembic upgrade head
+uvicorn app.main:app --reload --port 8000
 ```
 
-Open the app: `http://localhost:8000/`
+Postgres target: `DATABASE_URL=postgresql+psycopg2://postgres:password@localhost:5432/vhs02`
+SQLite fallback (tests + local runs without Postgres): `DATABASE_URL=sqlite:///./vhs02.db`
 
-Run the tests (from the project root):
-
+### Frontend
 ```powershell
-pytest tests/ -v
+cd web
+npm install
+npm run dev     # Vite proxy forwards /api to http://localhost:8000
 ```
+Open http://localhost:5173 → redirects to `/login`. Seed demo accounts first:
+`python backend/scripts/seed.py` (uses `DEMO_EMAIL`/`DEMO_PASSWORD` from env),
+or run with `AUTH_REQUIRED=false` for the single-user local path.
 
-## API
-
-### `POST /api/analyze`
-
-Request:
-
-```json
-{ "message": "Congratulations! You have received a refund. Scan the QR code immediately to claim it." }
-```
-
-Response:
-
-```json
-{
-  "risk_level": "HIGH",
-  "risk_score": 0.55,
-  "signals": ["reward_or_prize (+0.15): congratulations", "..."],
-  "recommended_action": "Multiple scam indicators detected. Do not proceed without independent verification.",
-  "analyzed_by": "explainer_v1",
-  "summary": "High risk: this message contains several warning signals. ...",
-  "explanation": ["The message claims you have won ... (found: \"congratulations\"). ..."],
-  "actions": ["Do not pay any fee or ..."]
-}
-```
-
-Validation: empty messages return `400`; missing `message` field returns `422`; messages are limited to 2000 characters. `GET /api/health` returns `{"status": "ok"}`.
-
-## Testing
-
+### Docker Compose (demo stack)
 ```powershell
-pytest tests/ -v
+docker compose up --build     # db + api (migrates on start) + web on :80
+python backend/scripts/seed.py  # against the composed API's database
+```
+See `DEMO_SCRIPT.md` for the timed demo. Recording the backup video and
+securing venue hosting are manual final-demo tasks.
+
+### Tests
+```powershell
+cd backend; python -m pytest -q        # SQLite-backed, hermetic
+cd backend; python -m ruff check app tests
+cd web; npx tsc --noEmit; npx vitest run; npm run build
 ```
 
-54 tests covering the endpoint, all 8 signal types, scorer weights/bonuses/level boundaries, and explainer grounding (every explanation quote must appear in scorer evidence; no certainty language like "definitely a scam" or "100% safe").
+## What's here
+- `backend/` — FastAPI app, 24-category registry, deterministic payment analyzer
+  (`pipeline/rules.py`, `pipeline/thresholds.py`, `analyzers/payment_analyzer.py`),
+  message/URL/QR analyzers, normalization + fusion + explanation pipeline
+  (`pipeline/normalize.py`, `signals.py`, `fuse.py`, `explain.py`, `run.py`),
+  scans + hash-chained audit_log + `qr_seen`, Alembic `0001`–`0002`,
+  pytest suite (golden corpora, units, parity, determinism, upload hardening,
+  seen semantics, chain tamper).
+- `web/` — six SentinelPay-structure pages (Login/Transaction/Result/Dashboard/History/Audit),
+  gauge + reasons + safe-action + evidence + seen-badge + advisory-note components,
+  session context, Recharts pie/histogram, typed API client, Vitest suite.
+- Auth, rate limiting, ML slot, and advisory live behind flags documented in
+  `backend/.env.example` (all safe defaults: required auth, no model, no advisory).
 
-## Current Status
+## QR upload limits (Slice 3)
+Images ≤ 5 MB with PNG/JPEG/WEBP/GIF magic bytes and ≤ 12 MP decoded pixels;
+anything else is rejected (413/422) or degrades to `unable_to_verify` — never a
+500. Client preview decode (`jsqr`) is convenience only; the server re-decodes
+every upload and its result is authoritative. Full payloads live in
+`result_json` only when `STORE_QR_PAYLOADS=true` and never enter logs; audit
+records carry the hash prefix + class only.
 
-Completed through Slice 4: working frontend + FastAPI backend + `/api/analyze` (Slice 1), deterministic 8-signal extraction `signal_extractor_v1` (Slice 2), weighted explainable scorer `weighted_scorer_v1` (Slice 3), evidence-grounded explanation/action layer `explainer_v1` (Slice 4).
+## Demo/local balance semantics (Slice 2)
+"Make Payment" on the Result page is explicitly demo/local behaviour: it deducts
+the analysed amount from a `localStorage` session balance (`vhs02-balance`),
+seeded from the analysed `sender_balance` on first result view. MEDIUM/HIGH
+verdicts require confirmation first; SAFE pays immediately. No money moves and
+no server-side ledger exists — a real ledger, if ever needed, belongs
+server-side and is out of scope.
 
-## Roadmap
+## What's not here (by design)
+Real-time threat feeds, DNS/WHOIS/fetching, visual QR forensics, push/email,
+mobile app, signup UI, production TLS hosting. The product advises; it never
+moves money.
 
-Future work, not yet implemented:
-
-- URL intelligence / reputation analysis
-- QR payload analysis
-- ML-based scoring
-- LLM-assisted analysis
-- Payment-context intelligence
-- Additional signal sources
-
-## Security / Limitations
-
-The risk score is a heuristic severity indicator, not a calibrated probability and not a fraud determination. A signal firing means a keyword pattern matched, not that a scam is confirmed; no signal firing does not mean a message is safe. Known example: legitimate OTP delivery messages trigger `otp_or_pin_request`. Always verify through official channels. This project has no authentication, no persistence, and no real transaction analysis — do not use it as a production fraud decision system.
+## Third-party licences (summary)
+FastAPI/uvicorn/SQLAlchemy/pydantic (MIT/BSD-family), XGBoost-free runtime —
+ML is optional via `requirements-ml.txt` (scikit-learn BSD-3, joblib BSD-3);
+`psycopg2-binary` (LGPL-3 with binary exception); React (MIT);
+`argon2-cffi` (MIT); OpenCV headless (Apache-2.0). No SentinelPay source or
+model artifact is used; behaviour is clean-room reimplemented (see header).

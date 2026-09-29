@@ -1,0 +1,17 @@
+{
+  "_comment": "Curated demo/test heuristic data for Slice 3. These are illustrative phishing-pattern hosts used by tests and demos. A match is an indicator that contributes to the score, NEVER proof of maliciousness. Not live threat intelligence. Do not use for blocking decisions outside this demo.",
+  "hosts": [
+    "paytm-secure-login.xyz",
+    "refund-claim-center.online",
+    "sbi-kyc-verify.top",
+    "secure-login-verify.xyz",
+    "upi-kyc-update.top"
+  ],
+  "entries": [
+    {"host": "paytm-secure-login.xyz", "reason": "observed pattern: <brand>-<action>.xyz impersonation shape"},
+    {"host": "refund-claim-center.online", "reason": "observed pattern: refund/claim-themed .online domains"},
+    {"host": "sbi-kyc-verify.top", "reason": "observed pattern: <bank>-kyc-verify .top shape"},
+    {"host": "secure-login-verify.xyz", "reason": "observed pattern: <action>-<action>.xyz login lures"},
+    {"host": "upi-kyc-update.top", "reason": "observed pattern: upi/kyc-themed .top domains in smishing tests"}
+  ]
+}

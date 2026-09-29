@@ -1,0 +1,94 @@
+/* theme/tokens.css — ported SentinelPay token values (Slice 1, plain CSS, no polish). */
+:root {
+  --bg0: #0a0e1a;
+  --bg1: #0f1628;
+  --bg2: #161e35;
+  --bg3: #1e2840;
+  --teal: #00d4c8;
+  --teal-dark: #009e94;
+  --text-primary: #f0f4ff;
+  --text-secondary: #8a9bbe;
+  --text-muted: #4a5878;
+  --safe: #00e676;
+  --suspicious: #ffab00;
+  --danger: #ff3d71;
+  --border: #1e2e50;
+  --border-light: #2a3a60;
+  --chart-a: #00d4c8;
+  --chart-b: #7b61ff;
+  --chart-c: #ff6b6b;
+  --chart-d: #00e676;
+  --font-display: Syne, 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg0);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+a { color: var(--teal); }
+
+.shell { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+.topbar {
+  display: flex; gap: 16px; align-items: center;
+  padding: 12px 24px; background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+}
+.topbar nav { display: flex; gap: 12px; margin-left: auto; }
+.topbar nav a { color: var(--text-secondary); text-decoration: none; }
+.topbar nav a.active, .topbar nav a:hover { color: var(--teal); }
+
+.card {
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+label { display: block; margin: 12px 0 4px; color: var(--text-secondary); font-size: 13px; }
+input, select, textarea {
+  width: 100%; padding: 10px 12px;
+  background: var(--bg3); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 8px;
+  font-size: 14px;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--teal); }
+
+button, .btn {
+  display: inline-block; padding: 10px 18px;
+  background: var(--teal); color: #04222b;
+  border: none; border-radius: 10px;
+  font-weight: 700; cursor: pointer; text-decoration: none;
+}
+button:disabled { opacity: 0.5; cursor: wait; }
+button.secondary { background: var(--bg2); color: var(--text-primary); border: 1px solid var(--border); }
+
+.badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.badge-safe { background: rgba(0, 230, 118, 0.15); color: var(--safe); border: 1px solid var(--safe); }
+.badge-medium { background: rgba(255, 171, 0, 0.15); color: var(--suspicious); border: 1px solid var(--suspicious); }
+.badge-high { background: rgba(255, 61, 113, 0.15); color: var(--danger); border: 1px solid var(--danger); }
+.badge-neutral { background: var(--bg2); color: var(--text-secondary); border: 1px solid var(--border); }
+
+.alert { padding: 12px 14px; border-radius: 10px; margin: 12px 0; }
+.alert-danger { background: rgba(255, 61, 113, 0.1); border: 1px solid var(--danger); color: var(--danger); }
+.alert-warn { background: rgba(255, 171, 0, 0.1); border: 1px solid var(--suspicious); color: var(--suspicious); }
+.alert-info { background: rgba(0, 212, 200, 0.08); border: 1px solid var(--teal); color: var(--teal); }
+
+.mono { font-family: var(--font-mono); font-size: 13px; }
+.muted { color: var(--text-muted); }
+.row { display: flex; gap: 12px; flex-wrap: wrap; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+table.scan-table { width: 100%; border-collapse: collapse; }
+table.scan-table td, table.scan-table th { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+.chips { display: flex; gap: 8px; margin: 12px 0; }
+.chain-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--safe); }
+.chain-dot.broken { background: var(--danger); }
+.spinner { color: var(--teal); }

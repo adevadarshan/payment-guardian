@@ -1,0 +1,46 @@
+# docker-compose.yml — venue/demo stack (Slice 4). No registry, no TLS.
+# Usage:  docker compose up --build
+# Reset:  docker compose down -v
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: vhs02
+      POSTGRES_USER: vhs02
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vhsecret}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vhs02 -d vhs02"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg2://vhs02:${POSTGRES_PASSWORD:-vhsecret}@db:5432/vhs02
+      APP_ENV: production
+      CORS_ORIGINS: http://localhost
+      TRUSTED_HOSTS: localhost
+      AUTH_REQUIRED: "true"
+      DEMO_EMAIL: demo@vhs02.local
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-demo1234}
+      MODEL_BACKEND: none
+      ADVISORY_ENABLED: "false"
+      PIPELINE_VERSION: slice-4
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  web:
+    build: ./web
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
